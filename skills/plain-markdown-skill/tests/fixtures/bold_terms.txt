@@ -1,0 +1,7 @@
+# Bold English terms to strip; one per line; blank lines and `#` comments ignored.
+variations
+differentials
+Undetermined Equations of Condition
+Determined Equations of Condition
+General Equation of Equilibrium
+Particular Equations of Equilibrium
