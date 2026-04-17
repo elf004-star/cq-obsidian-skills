@@ -98,3 +98,4 @@ settings.json
 claudian-settings.json
 sessions
 agents-memory/
+settings.local.json
