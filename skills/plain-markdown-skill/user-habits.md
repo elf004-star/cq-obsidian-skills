@@ -117,6 +117,7 @@ it only remains to add to the actual accelerating forces the new accelerating fo
 | `...` / `…` | `\dots` |
 | `\etc`（数学公式中） | `\dots` |
 | `\const` | `\text{const.}` |
+| `\text{c o n s t a n t}` | `\text{constant}` |
 
 ### 积分 / 求和符号 S 的统一
 
