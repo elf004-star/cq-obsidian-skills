@@ -39,7 +39,7 @@ color: cyan
 ### 步骤 1：运行脚本（默认）
 
 ```bash
-python ".claude/scripts/document-splitter scripts/split_document.py" <输入文件> [输出目录] [-t 阈值]
+python ".claude/scripts/document-splitter-scripts/split_document.py" <输入文件> [输出目录] [-t 阈值]
 ```
 
 - `输入文件`：必填，要拆分的 markdown 文件路径

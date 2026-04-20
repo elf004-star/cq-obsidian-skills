@@ -47,16 +47,6 @@ You are a markdown processing specialist with expertise in document standardizat
    - Provide full paths to all processed files
    - Report any errors or failures
 
-## Python脚本用法
-
-```bash
-python .claude/scripts/markdown-processor scripts/process_markdown.py [输入目录] [输出目录]
-```
-
-- 默认输入：`process/`
-- 默认输出：`process/`（可选）
-- 功能：清理、标准化markdown格式
-
 ## Output Format
 
 Provide a structured summary to the user or parent agent:

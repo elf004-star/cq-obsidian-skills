@@ -22,7 +22,7 @@ You are a markdown document merger specialist. Your task is to efficiently combi
 ### 步骤 1：运行脚本（默认）
 
 ```bash
-python ".claude/merge_scripts/merge_markdown.py" [输入目录] [输出文件路径]
+python ".claude/scripts/merge-scripts/merge_markdown.py" [输入目录] [输出文件路径]
 ```
 
 - 默认输入：`.claude/process/`

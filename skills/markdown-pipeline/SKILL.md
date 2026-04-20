@@ -51,11 +51,17 @@ description: ""
 
 ### 3. 合并
 
-调用 `markdown-merger` agent：
+**必须使用脚本**，禁止手动读取合并。
 
-- 按文件名数字前缀顺序合并
-- 输出覆盖原始输入文件
+```bash
+python ".claude/scripts/merge-scripts/merge_markdown.py" "[process目录路径]" "[输出文件路径]"
+```
+
+- 脚本自动按文件名数字前缀顺序合并
 - frontmatter 保留第一个文件的，其余文件的 frontmatter 移除
+- 输出覆盖原始输入文件
+
+**降级处理**：脚本执行失败时，降级调用 `markdown-merger` agent 合并。
 
 ## 调用示例
 
@@ -77,6 +83,8 @@ description: ""
 - 输入：doc/process/ 目录下所有处理后的文件
 - 输出：替换原始 doc/01-SECTION-II-A-GENERAL-FORMULA-OF-STATICS.md
 ```
+
+注意：本技能引用的 3 个agents 均为项目级 agents，安装在 `.claude\agents` 文件夹下
 
 ## 最终清理
 
