@@ -93,3 +93,7 @@ Note: The 3 agents referenced by this skill are all project-level agents, instal
 
 - Any sub-document processing failure: Report failed file, continue processing others
 - Merge failure: Do not replace original file, keep `process/` directory for manual recovery
+
+## Output Language
+
+All interactions with user use **Chinese(中文)**.

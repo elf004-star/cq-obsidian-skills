@@ -11,7 +11,7 @@ Convert any markdown source into **standard, minimal** CommonMark/GFM: keep only
 
 ## Single Source of Truth
 
-- **All user preferences are based on `user-habits.md`**. This file only describes workflow and categorization. If descriptions conflict, `user-habits.md` takes precedence.
+- **All user preferences are based on `config/user-habits.md`**. This file only describes workflow and categorization. If descriptions conflict, `config/user-habits.md` takes precedence.
 - Pandoc LaTeX compatibility reference: `references/pandoc-latex-support.md`.
 
 Why: User preferences change; keeping rules in one place prevents drift and keeps the skill stable.
@@ -42,12 +42,12 @@ Remove or flatten to plain text on sight:
 - HTML tags: `<span>`, `<div>`, `<font>`, `<br>`, etc. all inline/block HTML (HTML tables are an exception, convert to GFM tables)
 - Custom containers: `:::warning`, `:::tip`, `:::info`, `:::note`, etc. non-standard blocks
 - Emoji codes: `:warning:`, `:smile:`, etc.
-- Footnote markers `[^n]` → Convert to `[n]` per `user-habits.md`
+- Footnote markers `[^n]` → Convert to `[n]` per `config/user-habits.md`
 - Task lists `- [x]` / `- [ ]` → Plain unordered list `- `
 
-### Tier 2: Auto-convert (No confirmation, per user-habits.md)
+### Tier 2: Auto-convert (No confirmation, per config/user-habits.md)
 
-Rewrite in-place per `user-habits.md`, no need to disturb user each time:
+Rewrite in-place per `config/user-habits.md`, no need to disturb user each time:
 
 - Subscript/superscript forms (`<sub>/<sup>`, `^`, Unicode subscripts/superscripts, math-mode footnote references `$^{n}$`, etc.)
 - Bold, italic, strikethrough markers
@@ -60,7 +60,7 @@ Rewrite in-place per `user-habits.md`, no need to disturb user each time:
 
 ### Tier 3: Need Confirmation (Only one scenario)
 
-Discover **new patterns** not yet registered in `user-habits.md` — for example new footnote variants, new artifact characters, new non-standard macros — explain pattern to user and propose rule, **confirm before applying to current document**, and **ask whether to write rule back to `user-habits.md`** for future automation.
+Discover **new patterns** not yet registered in `config/user-habits.md` — for example new footnote variants, new artifact characters, new non-standard macros — explain pattern to user and propose rule, **confirm before applying to current document**, and **ask whether to write rule back to `config/user-habits.md`** for future automation.
 
 > Other CommonMark/GFM standard elements (headings, lists, code blocks, tables, horizontal rules, blockquotes, wiki links `[[...]]`, attachment references `![[...]]`, regular links, YAML frontmatter, etc.) are preserved as-is, except for the following typography fallback.
 
@@ -103,7 +103,7 @@ Auto-processed:
   - Standardized math formula wrapping X times, LaTeX commands X times
     (including X Pandoc-compatible replacements, X OCR artifact replacements)
 New patterns X (please confirm):
-  1. 「Pattern description」→ Suggested rule: ...   Add to user-habits.md?
+  1. 「Pattern description」→ Suggested rule: ...   Add to config/user-habits.md?
 ```
 
 No new patterns → proceed to step 4; new patterns → wait for user "adopt / reject / modify" one by one.
@@ -128,7 +128,7 @@ As the skill's final delivery threshold, this step **must execute**, cannot skip
 
 ### 5. Write Back
 
-Use normalized content to overwrite original file, keep backup. If user agrees to write new rules back, sync update `user-habits.md`.
+Use normalized content to overwrite original file, keep backup. If user agrees to write new rules back, sync update `config/user-habits.md`.
 
 ---
 

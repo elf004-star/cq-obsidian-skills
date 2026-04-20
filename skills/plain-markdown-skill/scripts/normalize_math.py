@@ -35,6 +35,10 @@ Orthogonal transforms, each individually toggleable:
    Two or more consecutive blank lines are collapsed to one.
    Content inside fenced code blocks is left untouched.
 
+8. simplify_array: flatten single-line ``\begin{array}`` environments to
+   ``\quad``-separated elements (``A, & B`` → ``A, \quad B``).
+   Multi-line arrays (containing newlines) are preserved unchanged.
+
 Usage as a module:
 
     from normalize_math import normalize
@@ -97,6 +101,33 @@ def collapse_math_whitespace(text: str) -> str:
         prev = text
         text = _WS_ADJACENT_CMDS.sub(r"\1\2", text)
     return text
+
+
+# Regex to match \begin{array}{...} ... \end{array} blocks
+_ARRAY_PATTERN = re.compile(
+    r'\\begin\{array\}\{[^}]*\}\s*(.*?)\s*\\end\{array\}',
+    re.DOTALL
+)
+
+
+def simplify_array(text: str) -> str:
+    """Flatten single-line array environments to qquad-separated elements.
+
+    ``\\begin{array}{c c c} A, & B, & C \\end{array}`` → ``A, \\quad B, \\quad C``
+
+    Multi-line arrays (containing newlines) are preserved unchanged.
+    """
+    def _replace(m: "re.Match[str]") -> str:
+        content = m.group(1)
+        # Only simplify single-line arrays (no internal newlines)
+        if '\n' in content:
+            return m.group(0)
+        # Strip leading/trailing whitespace
+        content = content.strip()
+        # Replace column separators & with \quad spacing
+        result = content.replace('&', r'\quad')
+        return result
+    return _ARRAY_PATTERN.sub(_replace, text)
 
 
 # Order matters: double-S forms must be rewritten before the single-S form so
@@ -375,6 +406,7 @@ def normalize(
     split_blocks: bool = True,
     standalone_inline_to_block: bool = True,
     blank_lines: bool = True,
+    simplify_arrays: bool = True,
 ) -> str:
     """Apply the enabled transforms in a stable order.
 
@@ -391,6 +423,8 @@ def normalize(
         body = collapse_math_whitespace(body)
     if unify_s:
         body = unify_integration_symbol(body)
+    if simplify_arrays:
+        body = simplify_array(body)
     if standalone_inline_to_block:
         body = promote_standalone_inline(body)
     if split_blocks:
@@ -425,6 +459,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="convert Unicode math glyphs inside $...$/$$...$$ to LaTeX")
     parser.add_argument("--no-blank-lines", action="store_true",
                         help="skip blank-line normalisation")
+    parser.add_argument("--no-simplify-arrays", action="store_true",
+                        help="skip array-environment simplification")
     parser.add_argument("--terms", type=Path, default=None,
                         help="path to a file of bold terms to strip (one per line)")
     args = parser.parse_args(argv)
@@ -440,6 +476,7 @@ def main(argv: list[str] | None = None) -> int:
         split_blocks=not args.no_split_blocks,
         standalone_inline_to_block=not args.no_standalone_inline,
         blank_lines=not args.no_blank_lines,
+        simplify_arrays=not args.no_simplify_arrays,
     )
     with open(args.path, "w", encoding="utf-8", newline="\n") as f:
         f.write(result)
