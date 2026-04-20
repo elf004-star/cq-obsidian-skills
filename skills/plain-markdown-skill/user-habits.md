@@ -1,107 +1,107 @@
-# 用户习惯 / User Habits
+# User Habits
 
-> 本文件记录用户在 plain-markdown-skill 使用过程中的偏好设置。
-> 技能在处理文档时会参考此文件中的规则，确保转换结果符合用户一贯的风格。
-> 如有变化，请随时更新本文件。
+> This file records user preferences for plain-markdown-skill.
+> The skill references rules in this file during document processing to ensure conversion results match the user's consistent style.
+> Update this file anytime preferences change.
 
 ---
 
-## 上下标处理
+## Subscript/Superscript Handling
 
-**当前偏好**：`[上标]` / `[下标]` 形式，不使用 `^` 或 Unicode 上标字符。
+**Current preference**: `[superscript]` / `[subscript]` form, do not use `^` or Unicode superscript characters.
 
 ```
-例：x^2 → $x^2$    深度学习<sub>2</sub> → 深度学习[2]    H₂O → $H_2 O$    参考文献$^2$ → 参考文献[2]   参考文献$_2$ → 参考文献[2]
+Examples: x^2 → $x^2$    深度学习<sub>2</sub> → 深度学习[2]    H₂O → $H_2 O$    参考文献$^2$ → 参考文献[2]   参考文献$_2$ → 参考文献[2]
 ```
 
-**是否始终应用**：是（默认，不需要每次询问）
+**Always apply**: Yes (default, no need to ask each time)
 
 ---
 
-## 加粗 / 斜体处理
+## Bold / Italic Handling
 
-**当前偏好**：转为纯文本，不保留任何样式标记。
+**Current preference**: Convert to plain text, do not preserve any style markers.
 
-**是否始终应用**：是（默认，不需要每次询问）
-
----
-
-## 脚注引用（允许python脚本批量处理这类错误）
-
-**当前偏好**：仅保留正文中公式、符号等的上标数字（如 `x²` 中的 `2`），不保留脚注引用标记 `[^1]` 等。
-
-**示例**：标 `<sup>52</sup>` 应保留为 `[52]` 形式。
-
-**Math mode 中的上标引用**：`$^{number}$` 与 `$_{number}$` 这类出现在 LaTeX 数学公式外部的上标或下标引用（脚注标记），应转为 `[number]` 形式。
-
-**示例**：
-- 原：`the water $^{56}$` → 规范化后：`the water [56]`
+**Always apply**: Yes (default, no need to ask each time)
 
 ---
 
-## 特殊符号与 OCR 乱码
+## Footnote References (Python script batch processing allowed)
 
-**已知的需要替换的符号**：
+**Current preference**: Only keep superscript numbers of formulas/symbols in body text (e.g., the `2` in `x²`), do not keep footnote reference markers `[^1]`, etc.
 
-| 原始符号 | 替换为 | 说明 |
-|---------|--------|------|
-| `™` | （删除或替换为普通引号） | OCR 乱码 |
-| `©` | `©` 或 `(C)` | 版权符号 |
-| `®` | `®` 或 `(R)` | 注册商标 |
-| `­­` | （删除） | 脱字符/乱码 |
-| `…` | `...` | 省略号统一用三个点 |
+**Example**: Mark `<sup>52</sup>` should be preserved as `[52]` form.
 
-**其他 OCR 乱码**：发现时询问用户确认。
+**Superscript references in Math mode**: Superscript or subscript references like `$^{number}$` and `$_{number}$` that appear outside LaTeX math formulas (footnote markers) should be converted to `[number]` form.
+
+**Example**:
+- Original: `the water $^{56}$` → Normalized: `the water [56]`
 
 ---
 
-## 段落合并规则
+## Special Symbols & OCR Artifacts
 
-当相邻两个段落满足以下全部条件时，自动合并为一个段落：
+**Known symbols that need replacement**:
 
-1. 前段末尾**不是**句号 `.`、问号 `?`、感叹号 `!`、分号 `;`、冒号 `:`
-2. 后段首字母**是小写**或**数字开头**
-3. 两个段落之间**只有一个**空行
+| Original | Replace with | Note |
+|----------|-------------|------|
+| `™` | (delete or replace with plain quote) | OCR artifact |
+| `©` | `©` or `(C)` | Copyright symbol |
+| `®` | `®` or `(R)` | Registered trademark |
+| `­­` | (delete) | Caret/artifact |
+| `…` | `...` | Ellipsis unified to three dots |
 
-**示例**：
+**Other OCR artifacts**: Ask user for confirmation when discovered.
+
+---
+
+## Paragraph Merge Rules
+
+When two adjacent paragraphs satisfy ALL of the following conditions, automatically merge into one paragraph:
+
+1. End of first paragraph is **NOT** period `.`, question mark `?`, exclamation mark `!`, semicolon `;`, colon `:`
+2. First letter of second paragraph **is lowercase** or **starts with number**
+3. There is **only one** blank line between the two paragraphs
+
+**Example**:
 
 ```
-原：
+Original:
 it only remains to add to the actual accelerating forces
 
 the new accelerating forces
 
-规范化后：
+Normalized:
 it only remains to add to the actual accelerating forces the new accelerating forces
 ```
 
 ---
 
-## 附件引用格式
+## Attachment Reference Format
 
-**当前偏好**：保留 `![[...]]` 语法原样。
-
----
-
-## Wiki 链接格式
-
-**当前偏好**：保留 `[[...]]` 语法原样。
+**Current preference**: Keep `![[...]]` syntax as-is.
 
 ---
 
-## 数学公式
+## Wiki Link Format
 
-数学公式及纯数学符号一律用 `$...$` 或 `$$...$$` 括起来。
+**Current preference**: Keep `[[...]]` syntax as-is.
 
-### 包裹规则
-- 行内公式：`$...$`
-- 行间公式（上下各留一空行）：`$$\n...\n$$`
-  - 已自动化：`scripts/normalize_math.py` 的 `split_block_math()`（CLI 默认开，`--no-split-blocks` 关闭）。
+---
 
-### 标准化规则
+## Math Formulas
 
-| 原始写法 | 规范写法 |
-|----------|----------|
+All math formulas and pure math symbols must be wrapped with `$...$` or `$$...$$`.
+
+### Wrapping Rules
+- Inline formula: `$...$`
+- Display formula (blank line above and below): `$$\n...\n$$`
+  - Automated: `scripts/normalize_math.py`'s `split_block_math()` (enabled by default, `--no-split-blocks` disables).
+
+### Standardization Rules
+
+| Original | Standard form |
+|----------|---------------|
 | `sqrt[...]` | `\sqrt[...]` |
 | `·` | `\cdot` |
 | `×` | `\times` |
@@ -115,63 +115,63 @@ it only remains to add to the actual accelerating forces the new accelerating fo
 | `∂` | `\partial` |
 | `∇` | `\nabla` |
 | `...` / `…` | `\dots` |
-| `\etc`（数学公式中） | `\dots` |
+| `\etc` (in math formulas) | `\dots` |
 | `\const` | `\text{const.}` |
 | `\text{c o n s t a n t}` | `\text{constant}` |
 
-### 积分 / 求和符号 S 的统一
+### Integral / Summation Symbol S Unification
 
-- 拉格朗日风格文本里用 `S` / `SS` 表示总积分（等价于 `∫`）。
-- 凡出现在数学上下文（含裸写、`\mathrm{S}`、`\mathbb{S}`、`\mathbf{S S}` 等）一律统一为：
-  - 单个：`\mathbf{S}`
-  - 双重：`\mathbf{SS}`
-- 正文中裸写的 `S` / `SS` 若紧跟数学表达式（`S(...)`、`S dm`、`SS Π dm` 等），整体包成行内公式，S 写作 `\mathbf{S}`。
+- In Lagrangian-style text, `S` / `SS` represents total integral (equivalent to `∫`).
+- All occurrences in math context (including bare write, `\mathrm{S}`, `\mathbb{S}`, `\mathbf{S S}`, etc.) unify to:
+  - Single: `\mathbf{S}`
+  - Double: `\mathbf{SS}`
+- Bare `S` / `SS` in body text that immediately follows math expressions (`S(...)`, `S dm`, `SS Π dm`, etc.) should be wrapped as inline formula, with S written as `\mathbf{S}`.
 
-### 公式内部冗余空格
+### Redundant Spaces Inside Formulas
 
-Pandoc/KaTeX 语义上无意义、视觉杂乱的空格一律压掉，例如：
+Spaces that are semantically meaningless and visually cluttered in Pandoc/KaTeX should be compressed, for example:
 
-| 原始写法 | 规范写法 |
-|---------|---------|
+| Original | Standard form |
+|----------|---------------|
 | `\mathrm {d}` | `\mathrm{d}` |
 | `\frac {a}{b}` | `\frac{a}{b}` |
 | `\Omega^ {\prime \prime}` | `\Omega^{\prime\prime}` |
 | `z _ {I}` | `z_{I}` |
 | `\lambda \cdot` | `\lambda\cdot` |
 
-批量情况推荐走 `plain-markdown-skill/scripts/normalize_math.py` 或一次性 regex，无需每处询问。
+For batch cases, recommend using `plain-markdown-skill/scripts/normalize_math.py` or one-time regex, no need to ask for each instance.
 
-### `array` 环境简化
+### `array` Environment Simplification
 
-多列单行 `\begin{array}{c c c} A, & B, & C \end{array}` → 展平为 `A, \quad B, \quad C`（去 `begin/end{array}`、对齐参数、列分隔符 `&`）。单列多行 `{l}` 数组（如多行积分推导）保留原样。
+Multi-column single-line `\begin{array}{c c c} A, & B, & C \end{array}` → flatten to `A, \quad B, \quad C` (remove `begin/end{array}`, alignment parameters, column separators `&`). Single-column multi-line `{l}` arrays (e.g., multi-line integral derivations) keep as-is.
 
-| 原始写法 | 规范写法 |
-|---------|---------|
+| Original | Standard form |
+|----------|---------------|
 | `\begin{array}{c c c} A, & B, & C \end{array}` | `A, \quad B, \quad C` |
 
-### 未登记的非 Pandoc 命令 / 未登记的 OCR 乱码
+### Unregistered Non-Pandoc Commands / Unregistered OCR Artifacts
 
-对上表未列出的情况，优先参照 `references/pandoc-latex-support.md` 自动做就近等价替换，无需每次打扰用户；仅在无把握时（如无法判断的罕见字符）作为"新模式"提请用户确认，并邀请把规则回写到本文件。
-
----
-
-## 标题层级
-
-- 顶层章节（`SECTION`、`Chapter`）用 `#`。
-- 次级分块（`Subsection`、`Part`）一律用 `##`，即便原文出现 `# Subsection III` 也降级为 `## Subsection III`。
-- 条目级（`Article N`）用 `##`。
-- 条目内部编号列表（`1.` / `2.` 等）保持列表项，不单独升为标题；若上游抽取把列表项误作 `## Article 1` / `## Article 2`，应去掉多余标题。
+For cases not listed above, prioritize nearest equivalent replacement automatically per `references/pandoc-latex-support.md`, no need to disturb user each time; only when uncertain (e.g., unidentifiable rare characters) raise as "new pattern" for user confirmation, and invite writing rule back to this file.
 
 ---
 
-## 备份策略
+## Heading Levels
 
-- 处理前一律先备份原文件
-- 备份文件命名：`*原始文件名*.bak.orig`
-- 备份文件保存在同目录下
+- Top-level sections (`SECTION`, `Chapter`) use `#`.
+- Secondary blocks (`Subsection`, `Part`) all use `##`, even if original text has `# Subsection III` it should be demoted to `## Subsection III`.
+- Item-level (`Article N`) use `##`.
+- Numbered lists inside items (`1.` / `2.` etc.) keep as list items, do not separately promote to headings; if upstream extraction mistakenly treats list items as `## Article 1` / `## Article 2`, remove the extra heading.
 
 ---
 
-## 其他偏好
+## Backup Strategy
 
-（请根据实际情况补充）
+- Always backup original file before processing
+- Backup file naming: `*original filename*.bak.orig`
+- Backup files saved in same directory
+
+---
+
+## Other Preferences
+
+(Please supplement according to actual situation)

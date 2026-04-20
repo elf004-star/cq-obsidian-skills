@@ -1,138 +1,137 @@
 ---
 name: plain-markdown-skill
-description: |
-  把一份杂乱的 markdown 文档规范化并极简化为 CommonMark/GFM 纯 markdown。本技能适合处理单个文档，模型能力越强，支持的文档越长。
+description: "Normalize messy markdown documents into clean CommonMark/GFM plain text. This skill works on single documents; stronger model capabilities support longer documents."
 ---
 
 # Plain Markdown Skill
 
-## 目标
+## Goal
 
-把任意来源的 markdown 收敛成**规范、极简**的 CommonMark/GFM：只留标准元素、修明显错误、清不规范语法，不添加装饰。学术内容（数学公式、符号）全部保留，仅规范化语法。
+Convert any markdown source into **standard, minimal** CommonMark/GFM: keep only standard elements, fix obvious errors, remove non-standard syntax, no decorations. Academic content (math formulas, symbols) is preserved entirely; only syntax is normalized.
 
-## 单一真源
+## Single Source of Truth
 
-- **用户偏好全部以 `user-habits.md` 为准**。本文件不再复述具体规则，只写流程与分类。两处描述若有冲突，以 `user-habits.md` 为准。
-- Pandoc LaTeX 兼容性查 `references/pandoc-latex-support.md`。
+- **All user preferences are based on `user-habits.md`**. This file only describes workflow and categorization. If descriptions conflict, `user-habits.md` takes precedence.
+- Pandoc LaTeX compatibility reference: `references/pandoc-latex-support.md`.
 
-之所以这么做：用户偏好会变，规则表只放一处，改动不会漂移，技能本身保持稳定。
+Why: User preferences change; keeping rules in one place prevents drift and keeps the skill stable.
 
-## 资源目录
+## Resource Directory
 
-- `scripts/normalize_math.py`——**每次处理都必须执行**的数学/样式标准化脚本（作为工作流第 4 步），当前 4 组变换，均可单独开关：
-  - **公式块拆分/升级**：单独一行的 `$...$` 升级为 `$$\n...\n$$` 三行块格式
-  - **公式内空格压缩**：`\mathrm {d}` → `\mathrm{d}`、`z _ {I}` → `z_{I}`、`\cmd \cmd` → `\cmd\cmd`（默认开启，`--no-whitespace` 关闭）
-  - **积分符号 S 统一**：`\mathrm{S}` / `\mathbb{S}` / `\mathbf{S S}` 一律归到 `\mathbf{S}` / `\mathbf{SS}`（默认开启，`--no-s-unify` 关闭）
-  - **bold 术语剥除**：按 `--terms` 文件清单去掉 `**术语**` 包裹
-  - **Unicode 数学字符 → LaTeX 命令**（`·→\cdot`、`α→\alpha`、`²→^{2}`、`…→\dots` 等；仅在 `$...$` / `$$...$$` 内生效，不碰正文，`--unicode-math` 开启）
-  脚本默认全部开启，无需每次询问。
-- `references/pandoc-latex-support.md`——Pandoc LaTeX 兼容命令速查。
-- `references/normalize_lagrange.py`——一次性文档专用脚本的留样，供后续相似文档参考；不作通用工具使用。
-- `tests/`——对上述脚本的 pytest 回归套件与 fixture（`math_section_input.md` / `math_section_expected.md`），改脚本前先跑 `python -m pytest .claude/skills/plain-markdown-skill/tests -v`。
-
----
-
-## 处理分类
-
-分三档，决定"做不做、问不问"。
-
-### 档 1：自动删除（不询问）
-
-出现即移除或平铺为纯文本：
-
-- HTML 标签：`<span>`、`<div>`、`<font>`、`<br>` 等所有行内/块级 HTML（HTML 表格例外，转成 GFM 表格）
-- 自定义容器：`:::warning`、`:::tip`、`:::info`、`:::note` 等非标准块
-- emoji 代码：`:warning:`、`:smile:` 等
-- 脚注标记 `[^n]` → 按 `user-habits.md` 转成 `[n]`
-- 任务列表 `- [x]` / `- [ ]` → 普通无序列表 `- `
-
-### 档 2：自动转换（不询问，按 user-habits.md）
-
-按 `user-habits.md` 就地改写，无须每次打扰用户：
-
-- 上下标形式（`<sub>/<sup>`、`^`、Unicode 上下标、math-mode 脚注引用 `$^{n}$` 等）
-- 加粗、斜体、删除线等样式标记
-- 段落错行合并
-- 数学公式包裹（行内 `$...$`、行间 `$$...$$`）与 LaTeX 命令标准化
-- 已知特殊符号 / OCR 乱码替换表
-- 链接空白清理：`[ 文本 ]( URL )` → `[文本](URL)`
-
-**非 Pandoc 兼容的 LaTeX 命令**与**未登记的 OCR 乱码**也归到这一档：参照 `references/pandoc-latex-support.md` 做就近等价替换，无把握的个别字符归到档 3。
-
-### 档 3：需询问（仅一种情形）
-
-发现 `user-habits.md` 尚未登记的**新模式**——例如新的脚注变体、新的乱码字符、新的非标准宏——向用户说明模式并提议规则，**确认后应用到当前文档**，并**询问是否把规则回写 `user-habits.md`**，以便以后自动化。
-
-> 其他 CommonMark/GFM 标准元素（标题、列表、代码块、表格、水平线、引用块、wiki 链接 `[[...]]`、附件引用 `![[...]]`、普通链接、YAML frontmatter 等）一律原样保留，只做下面的排版兜底。
+- `scripts/normalize_math.py` — **Must be executed every time** math/style standardization script (as workflow step 4), currently 4 transformation groups, each independently toggleable:
+  - **Formula block split/upgrade**: Standalone `$...$` on a single line upgrades to `$$\n...\n$$` three-line block format
+  - **Intra-formula space compression**: `\mathrm {d}` → `\mathrm{d}`, `z _ {I}` → `z_{I}`, `\cmd \cmd` → `\cmd\cmd` (enabled by default, `--no-whitespace` disables)
+  - **Integral symbol S unification**: `\mathrm{S}` / `\mathbb{S}` / `\mathbf{S S}` all normalize to `\mathbf{S}` / `\mathbf{SS}` (enabled by default, `--no-s-unify` disables)
+  - **Bold term stripping**: Remove `**term**` wrapping per `--terms` file list
+  - **Unicode math chars → LaTeX commands** (`·→\cdot`, `α→\alpha`, `²→^{2}`, `…→\dots`, etc.; only effective inside `$...$` / `$$...$$`, does not affect body text, `--unicode-math` enables)
+  All enabled by default, no need to ask each time.
+- `references/pandoc-latex-support.md` — Pandoc LaTeX compatibility command reference.
+- `references/normalize_lagrange.py` — Reference script for one-time document processing; not for general tool use.
+- `tests/` — pytest regression suite and fixtures for above scripts (`math_section_input.md` / `math_section_expected.md`), run `python -m pytest .claude/skills/plain-markdown-skill/tests -v` before modifying scripts.
 
 ---
 
-## 排版兜底（自动，不记入 user-habits）
+## Processing Categories
 
-这些是 CommonMark/GFM 通用排版礼貌：
+Three tiers, determining "whether to do, whether to ask".
 
-- 段落之间一个空行；代码块、数学块、列表、标题前后留空行
-- ATX 标题最多 6 级；标题行尾不带标点
-- YAML frontmatter 放文档开头；出现在中间/末尾的就合并或删除
-- GFM 表格对齐符 `|:--|` 原样保留；清理单元格多余空格
-- 代码块原样保留，不擅改语言标注
-- 公式包裹后复核 `$` 成对、括号匹配
+### Tier 1: Auto-delete (No confirmation)
+
+Remove or flatten to plain text on sight:
+
+- HTML tags: `<span>`, `<div>`, `<font>`, `<br>`, etc. all inline/block HTML (HTML tables are an exception, convert to GFM tables)
+- Custom containers: `:::warning`, `:::tip`, `:::info`, `:::note`, etc. non-standard blocks
+- Emoji codes: `:warning:`, `:smile:`, etc.
+- Footnote markers `[^n]` → Convert to `[n]` per `user-habits.md`
+- Task lists `- [x]` / `- [ ]` → Plain unordered list `- `
+
+### Tier 2: Auto-convert (No confirmation, per user-habits.md)
+
+Rewrite in-place per `user-habits.md`, no need to disturb user each time:
+
+- Subscript/superscript forms (`<sub>/<sup>`, `^`, Unicode subscripts/superscripts, math-mode footnote references `$^{n}$`, etc.)
+- Bold, italic, strikethrough markers
+- Paragraph line-break merging
+- Math formula wrapping (inline `$...$`, display `$$...$$`) and LaTeX command standardization
+- Known special symbol / OCR artifact replacement table
+- Link whitespace cleanup: `[ text ]( URL )` → `[text](URL)`
+
+**Non-Pandoc-compatible LaTeX commands** and **unregistered OCR artifacts** also belong to this tier: refer to `references/pandoc-latex-support.md` for nearest equivalent replacement; uncertain individual characters fall to tier 3.
+
+### Tier 3: Need Confirmation (Only one scenario)
+
+Discover **new patterns** not yet registered in `user-habits.md` — for example new footnote variants, new artifact characters, new non-standard macros — explain pattern to user and propose rule, **confirm before applying to current document**, and **ask whether to write rule back to `user-habits.md`** for future automation.
+
+> Other CommonMark/GFM standard elements (headings, lists, code blocks, tables, horizontal rules, blockquotes, wiki links `[[...]]`, attachment references `![[...]]`, regular links, YAML frontmatter, etc.) are preserved as-is, except for the following typography fallback.
 
 ---
 
-## 工作流程
+## Typography Fallback (Automatic, not recorded in user-habits)
 
-### 1. 读入 + 备份
+These are CommonMark/GFM universal typography courtesies:
 
-用户可能给**文件路径**或**粘贴文本**。一律先备份：
+- One blank line between paragraphs; blank lines before/after code blocks, math blocks, lists, headings
+- ATX headings up to 6 levels; heading lines do not end with punctuation
+- YAML frontmatter at document beginning; those appearing in middle/end are merged or removed
+- GFM table alignment `|:--|` preserved as-is; clean extra spaces in cells
+- Code blocks preserved as-is, do not modify language annotations
+- After formula wrapping, verify `$` pairing and bracket matching
 
-- 有路径：与原文件同目录，命名 `*原文件名*.bak.orig`
-- 纯文本：当前工作目录下 `plain-markdown-backup-YYYYMMDD-HHMMSS.md`
+---
 
-### 2. 扫描 + 自动处理
+## Workflow
 
-一次性跑完档 1、档 2：自动删除 + 自动转换。过程中收集档 3 的新模式清单。
+### 1. Read + Backup
 
-### 3. 报告 + （若有）询问
+User may provide **file path** or **pasted text**. Always backup first:
 
-给用户一份精简摘要，例如：
+- With path: same directory as original file, naming `*original filename*.bak.orig`
+- Plain text: `plain-markdown-backup-YYYYMMDD-HHMMSS.md` in current working directory
+
+### 2. Scan + Auto-process
+
+Run through Tier 1, Tier 2 in one pass: auto-delete + auto-convert. Collect Tier 3 new pattern list during process.
+
+### 3. Report + (If any) Confirm
+
+Give user a concise summary, for example:
 
 ```
-自动处理：
-  - 移除 HTML X 处、自定义容器 X 处、字体标记 X 处
-  - 上下标 X 处、脚注 X 处、段落合并 X 处、链接空白 X 处
-  - 数学公式包裹 X 处、LaTeX 命令标准化 X 处
-    （含 X 处 Pandoc 兼容替换、X 处 OCR 乱码替换）
-新模式 X 个（请确认）：
-  1. 「模式描述」→ 建议规则：……   是否加入 user-habits.md？
+Auto-processed:
+  - Removed HTML X times, custom containers X times, font markers X times
+  - Converted subscript/superscript X times, footnotes X times, paragraph merges X times, link whitespace X times
+  - Standardized math formula wrapping X times, LaTeX commands X times
+    (including X Pandoc-compatible replacements, X OCR artifact replacements)
+New patterns X (please confirm):
+  1. 「Pattern description」→ Suggested rule: ...   Add to user-habits.md?
 ```
 
-没有新模式 → 直接进入第 4 步；有新模式 → 逐条等待用户"采纳 / 否决 / 修改"。
+No new patterns → proceed to step 4; new patterns → wait for user "adopt / reject / modify" one by one.
 
-### 4. 数学标准化（必须执行）
+### 4. Math Standardization (Must Execute)
 
-在档 2 所有转换完成之后、写回之前，对文件执行 `scripts/normalize_math.py`：
+After all Tier 2 conversions complete and before write-back, execute `scripts/normalize_math.py` on the file:
 
 ```bash
-python scripts/normalize_math.py <文件路径>
+python scripts/normalize_math.py <file path>
 ```
 
-这会将所有行间公式统一为 `$$\n...\n$$` 三行块格式，并完成公式内空格压缩、积分符号 S 统一等批量标准化。
+This will unify all display formulas to `$$\n...\n$$` three-line block format, and complete batch standardization like intra-formula space compression, integral symbol S unification.
 
-**关键：无论之前是否跑过 normalize_math.py，档 2 产生的任何新数学公式都需要它再跑一遍才能交付。**因此正确的顺序永远是：
+**Key: Regardless of whether normalize_math.py was run before, any new math formulas produced by Tier 2 need it to run again before delivery.** Therefore the correct order is always:
 
-1. 档 1 → 档 2（手工或脚本的转换）
-2. **normalize_math.py**（此时对第 1 步的所有产出做最终标准化）
-3. 写回
+1. Tier 1 → Tier 2 (manual or script conversion)
+2. **normalize_math.py** (final standardization of all outputs from step 1)
+3. Write back
 
-作为技能的最终交付门槛，这一步**必须执行**，不可跳过。
+As the skill's final delivery threshold, this step **must execute**, cannot skip.
 
-### 5. 写回
+### 5. Write Back
 
-用规范化后的内容覆盖原文件，备份保留。若用户同意把新规则回写，同步更新 `user-habits.md`。
+Use normalized content to overwrite original file, keep backup. If user agrees to write new rules back, sync update `user-habits.md`.
 
 ---
 
-## 输出语言
+## Output Language
 
-与用户的一切交互使用**中文**。
+All interactions with user use **Chinese(中文)**.

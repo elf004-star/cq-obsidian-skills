@@ -1,95 +1,97 @@
 # Claude Skills Wiki
 
-一个基于 Obsidian Wiki 和 Claude Code 的知识管理技能库。
+> **Note**: This is the English version. For Chinese documentation, see [README-中文.md](README-中文.md).
 
-## 核心目标
+A knowledge management skill library based on Obsidian Wiki and Claude Code.
 
-**mark every-documents down** —— 将所有文档转为纯文本 Markdown 保存，构建 AI 可高效理解的知识图谱。
+## Core Goal
 
-## 技能库
+**mark every-documents down** — Convert all documents into plain-text Markdown, building an AI-friendly knowledge graph.
+
+## Skills
 
 ### plain-markdown-skill
 
-将任意杂乱的 Markdown 文档规范化为 CommonMark/GFM 纯文本格式。
+Normalizes messy Markdown documents into clean CommonMark/GFM format.
 
-**功能**：
-- 自动删除 HTML 标签、自定义容器、emoji 代码
-- 转换上下标、脚注、段落错行等格式问题
-- 数学公式标准化（LaTeX 命令统一、积分符号规范化）
-- OCR 乱码智能替换
+**Features**:
+- Auto-removes HTML tags, custom containers, emoji codes
+- Converts subscript/superscript, footnotes, paragraph line breaks
+- Math formula standardization (LaTeX commands, integral symbols)
+- Smart OCR artifact replacement
 
-**详情**：[skills/plain-markdown-skill/SKILL.md](skills/plain-markdown-skill/SKILL.md)
+**Details**: [skills/plain-markdown-skill/SKILL.md](skills/plain-markdown-skill/SKILL.md)
 
 ### markdown-pipeline
 
-长 Markdown 文档的编排器：先拆分、再并行处理、最后合并。
+Orchestrator for long Markdown documents: split → parallel process → merge.
 
-**流程**：
+**Flow**:
 ```
-输入文档 → document-splitter → n 个子文档
+Input → document-splitter → n sub-documents
                     ↓
-           ≤6 个 markdown-processor（并行）
+           ≤6 markdown-processor (parallel)
                     ↓
-              markdown-merger → 输出文档
+              markdown-merger → Output
 ```
 
-**详情**：[skills/markdown-pipeline/SKILL.md](skills/markdown-pipeline/SKILL.md)
+**Details**: [skills/markdown-pipeline/SKILL.md](skills/markdown-pipeline/SKILL.md)
 
-## 设计理念
+## Design Philosophy
 
-### 知识图谱的 AI 友好格式
+### AI-Friendly Knowledge Graph Format
 
-为提高 AI 理解效率、节省 tokens，本仓库对非文本资源采用**引用式抽象**：
+To improve AI comprehension efficiency and save tokens, this repository uses **referential abstraction** for non-text resources:
 
-| 资源类型 | 处理方式 |
-|---------|---------|
-| 图片 | 引用到 `图片描述.md` |
-| 音频 | 引用到 `.srt.md` |
-| 表格/数据库 | 引用到 `说明书/操作指南.md` |
+| Resource Type | Approach |
+|--------------|----------|
+| Images | Reference to `图片描述.md` |
+| Audio | Reference to `.srt.md` |
+| Tables/Databases | Reference to `说明书/操作指南.md` |
 
-**优势**：
-- AI 无需重复识别图片/音频，可直接读取描述
-- 知识图谱结构清晰，关联明确
-- 节省 tokens，提高处理效率
+**Benefits**:
+- AI reads descriptions directly without reprocessing images/audio
+- Clear knowledge graph structure with explicit relationships
+- Reduced tokens, improved processing efficiency
 
-### 图片引用示例
+### Image Reference Example
 
 ```markdown
 ![[diagram-architecture.png]]
 
-<!-- 对应图片描述.md -->
-## 图 1：系统架构图
+<!-- Corresponding 图片描述.md -->
+## Figure 1: System Architecture
 
-该图展示了微服务架构的三个层次...
+This diagram shows the three layers of microservices architecture...
 ```
 
-### 音频引用示例
+### Audio Reference Example
 
 ```markdown
 ![[lecture-01.srt]]
 
-<!-- 对应 lecture-01.srt.md -->
-## 音频转录文本
+<!-- Corresponding lecture-01.srt.md -->
+## Audio Transcription
 
-00:00 - 开场介绍
-00:30 - 主题阐述...
+00:00 - Introduction
+00:30 - Topic explanation...
 ```
 
-## 许可证
+## License
 
-本仓库基于 MIT 许可证开源。
+This repository is open-sourced under the MIT License.
 
-**核心约束**：
-- 可自由使用、修改、商业使用
-- 必须保留署名和许可证声明
-- 不承担任何担保责任
+**Core terms**:
+- Free to use, modify, commercial use allowed
+- Must retain attribution and license notice
+- No warranty provided
 
-详见 [LICENSE](LICENSE) 文档。
+See [LICENSE](LICENSE) for details.
 
-## 致谢
+## Acknowledgments
 
-本仓库大部分技能来自：
-- Obsidian 官方技能库
-- Claude 官方 Skill 市场
+Most skills in this repository come from:
+- Obsidian official skills
+- Claude official Skill marketplace
 
-在此感谢所有开源贡献者。
+Thanks to all open-source contributors.
