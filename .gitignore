@@ -99,3 +99,7 @@ claudian-settings.json
 sessions
 agents-memory/
 settings.local.json
+
+# Immature skills
+pandoc-fixer/
+doc-pipeline/
