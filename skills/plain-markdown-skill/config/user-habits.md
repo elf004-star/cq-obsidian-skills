@@ -47,10 +47,10 @@
 
 ## Subscript/Superscript Handling
 
-**Current preference**: `[superscript]` / `[subscript]` form, do not use `^` or Unicode superscript characters.
+**Current preference**: `[superscript]` / `[subscript]` form, do not use `^` or Unicode superscript characters. Add one space before the brackets.
 
 ```
-Examples: x^2 → $x^2$    深度学习<sub>2</sub> → 深度学习[2]    H₂O → $H_2 O$    参考文献$^2$ → 参考文献[2]   参考文献$_2$ → 参考文献[2]
+Examples: x^2 → $x^2$    深度学习<sub>2</sub> → 深度学习 [2]    H₂O → $H_2 O$    Deep learning$^2$ → Deep learning [2]   Deep learning $_2$ → Deep learning [2]
 ```
 
 | Status | Implementation |
