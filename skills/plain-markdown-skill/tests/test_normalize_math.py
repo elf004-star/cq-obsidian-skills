@@ -293,6 +293,52 @@ class TestToggles:
         assert normalize_math.normalize(src) == "$$\nx=1\n$$"
 
 
+class TestTableProtection:
+    def test_consecutive_table_rows_no_blank_lines(self) -> None:
+        """GFM table rows must stay consecutive without inserted blank lines."""
+        src = "| A | B |\n|---|---|\n| 1 | 2 |\n| 3 | 4 |"
+        out = normalize_math.normalize_blank_lines(src)
+        # Count blank lines between table rows (should be 0)
+        lines = out.splitlines()
+        blank_count = sum(1 for l in lines if l.strip() == "")
+        assert blank_count == 0
+
+    def test_table_after_paragraph_gets_blank_line(self) -> None:
+        """A blank line must precede a table that follows prose."""
+        src = "Some text\n| A | B |\n|---|---|\n| 1 | 2 |"
+        out = normalize_math.normalize_blank_lines(src)
+        # Should have: "Some text", blank line, "| A | B |", ...
+        lines = out.splitlines()
+        assert lines[0] == "Some text"
+        assert lines[1] == ""
+        assert lines[2] == "| A | B |"
+
+    def test_table_followed_by_paragraph(self) -> None:
+        """A blank line must follow a table that precedes prose."""
+        src = "| A | B |\n|---|---|\n| 1 | 2 |\nMore text"
+        out = normalize_math.normalize_blank_lines(src)
+        lines = out.splitlines()
+        # Should end with blank line before "More text"
+        text_idx = lines.index("More text")
+        assert lines[text_idx - 1] == ""
+
+    def test_table_in_document(self) -> None:
+        """Full document with table: table rows stay consecutive."""
+        src = (
+            "# Heading\n\n"
+            "Paragraph one.\n\n"
+            "| A | B |\n|---|---|\n| 1 | 2 |\n| 3 | 4 |\n\n"
+            "Paragraph two.\n"
+        )
+        out = normalize_math.normalize_blank_lines(src)
+        lines = out.splitlines()
+        # Find table rows
+        table_row_indices = [i for i, l in enumerate(lines) if l.strip().startswith("|")]
+        # Check they are consecutive (no blank line between them)
+        for j in range(len(table_row_indices) - 1):
+            assert table_row_indices[j + 1] == table_row_indices[j] + 1
+
+
 class TestFrontmatterProtection:
     def test_frontmatter_untouched(self) -> None:
         src = (

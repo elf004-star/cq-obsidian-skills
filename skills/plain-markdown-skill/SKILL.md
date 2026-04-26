@@ -18,13 +18,25 @@ Why: User preferences change; keeping rules in one place prevents drift and keep
 
 ## Resource Directory
 
-- `scripts/normalize_math.py` — **Must be executed every time** math/style standardization script (as workflow step 4), currently 4 transformation groups, each independently toggleable:
+- `scripts/normalize_math.py` — **Must be executed every time** math/style standardization script (as workflow step 4), currently 5 transformation groups, each independently toggleable:
   - **Formula block split/upgrade**: Standalone `$...$` on a single line upgrades to `$$\n...\n$$` three-line block format
-  - **Intra-formula space compression**: `\mathrm {d}` → `\mathrm{d}`, `z _ {I}` → `z_{I}`, `\cmd \cmd` → `\cmd\cmd` (enabled by default, `--no-whitespace` disables)
-  - **Integral symbol S unification**: `\mathrm{S}` / `\mathbb{S}` / `\mathbf{S S}` all normalize to `\mathbf{S}` / `\mathbf{SS}` (enabled by default, `--no-s-unify` disables)
+  - **Intra-formula space compression**: `\mathrm {d}` → `\mathrm{d}`, `z _ {I}` → `z_{I}`, `\cmd \cmd` → `\cmd\cmd`
+  - **Integral symbol S unification**: `\mathrm{S}` / `\mathbb{S}` / `\mathbf{S S}` all normalize to `\mathbf{S}` / `\mathbf{SS}`
   - **Bold term stripping**: Remove `**term**` wrapping per `--terms` file list
-  - **Unicode math chars → LaTeX commands** (`·→\cdot`, `α→\alpha`, `²→^{2}`, `…→\dots`, etc.; only effective inside `$...$` / `$$...$$`, does not affect body text, `--unicode-math` enables)
+  - **Unicode math chars → LaTeX commands**: `·→\cdot`, `α→\alpha`, `²→^{2}`, `…→\dots`, etc. (only inside math, `--unicode-math` enables)
+  - **Formula-Chinese wrapping**: `\cmd中文` → `\cmd{中文}` (pandoc compatibility)
   All enabled by default, no need to ask each time.
+
+  **Command-line usage**:
+  ```bash
+  python normalize_math.py <file.md>                    # 默认全部启用
+  python normalize_math.py <file.md> --no-whitespace    # 禁用空格压缩
+  python normalize_math.py <file.md> --no-s-unify       # 禁用 S 符号统一
+  python normalize_math.py <file.md> --no-split-blocks  # 禁用公式块拆分
+  python normalize_math.py <file.md> --unicode-math     # 启用 Unicode 转换
+  python normalize_math.py <file.md> --no-wrap-chinese # 禁用中文包裹
+  python normalize_math.py <file.md> --terms path.txt  # 指定要移除的 bold 词列表
+  ```
 - `references/pandoc-latex-support.md` — Pandoc LaTeX compatibility command reference.
 - `references/normalize_lagrange.py` — Reference script for one-time document processing; not for general tool use.
 - `tests/` — pytest regression suite and fixtures for above scripts (`math_section_input.md` / `math_section_expected.md`), run `python -m pytest .claude/skills/plain-markdown-skill/tests -v` before modifying scripts.
@@ -80,6 +92,17 @@ These are CommonMark/GFM universal typography courtesies:
 ---
 
 ## Workflow
+
+### 0. Load Configuration (MUST READ FIRST)
+
+**Before processing any document, Agent MUST read `config/user-habits.md` first.**
+
+This is the **single source of truth** for all user preferences. The Agent must:
+1. Load and parse all rules from `config/user-habits.md`
+2. Apply those rules during Tier 1/Tier 2 processing
+3. Reference this file when converting math commands and handling patterns
+
+Do NOT proceed to step 1 until config is loaded and internalized.
 
 ### 1. Read + Backup
 

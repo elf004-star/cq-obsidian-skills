@@ -6,6 +6,45 @@
 
 ---
 
+## Automation Status Overview
+
+| Category | Rule | Auto (Script) | Auto (Agent) | Manual |
+|----------|------|:---:|:---:|:---:|
+| **Math** | Formula block split (`$$...$$`) | ✅ | - | - |
+| **Math** | Inline formula wrapping (`$...$`) | - | ✅ | - |
+| **Math** | Formula variable wrapping (`$S_{limit}$`) | - | ✅ | - |
+| **Math** | Standalone formula → `$$...$$` upgrade | - | ✅ | - |
+| **Math** | Intra-formula space compression | ✅ | - | - |
+| **Math** | Integral symbol S unification | ✅ | - | - |
+| **Math** | Unicode math → LaTeX | ✅ | - | - |
+| **Math** | `array` environment simplification | ✅ | - | - |
+| **Math** | `\sqrt[...]` → `\sqrt(...)` | ❌ | - | ⚠️ |
+| **Math** | `\etc` → `\dots` | ❌ | - | ⚠️ |
+| **Math** | `\const` → `\text{const.}` | ❌ | - | ⚠️ |
+| **Math** | Bare `SS` → `\mathbf{SS}` (body text) | ❌ | - | ⚠️ |
+| **Math** | Formula-Chinese spacing (`{中文}`) | ✅ | - | - |
+| **Text** | Subscript/superscript conversion | - | ⚠️ | ⚠️ |
+| **Text** | Bold/italic → plain text | - | ✅ | - |
+| **Text** | Footnote `[^n]` → `[n]` | - | ✅ | - |
+| **Text** | Paragraph merge rules | - | ✅ | - |
+| **Text** | Link whitespace cleanup | - | ✅ | - |
+| **Text** | OCR artifact replacement | - | ✅ | - |
+| **Delete** | HTML tags removal | - | ✅ | - |
+| **Delete** | Custom containers removal | - | ✅ | - |
+| **Delete** | Emoji codes removal | - | ✅ | - |
+| **Delete** | Task list conversion | - | ✅ | - |
+| **Format** | Wiki/attachment links preserved | - | ✅ | - |
+| **Format** | Heading level normalization | - | ⚠️ | ⚠️ |
+
+**Legend**: ✅ = Implemented | ⚠️ = Partially/Manual | ❌ = Not implemented | - = Not applicable
+
+**Key**:
+- **Auto (Script)**: `scripts/normalize_math.py` handles automatically
+- **Auto (Agent)**: Agent applies rule during Tier 1/2 processing
+- **Manual**: Must be applied manually or requires special attention
+
+---
+
 ## Subscript/Superscript Handling
 
 **Current preference**: `[superscript]` / `[subscript]` form, do not use `^` or Unicode superscript characters.
@@ -14,7 +53,9 @@
 Examples: x^2 → $x^2$    深度学习<sub>2</sub> → 深度学习[2]    H₂O → $H_2 O$    参考文献$^2$ → 参考文献[2]   参考文献$_2$ → 参考文献[2]
 ```
 
-**Always apply**: Yes (default, no need to ask each time)
+| Status | Implementation |
+|--------|----------------|
+| ⚠️ Manual | Agent must identify patterns like `<sub>`, `^`, Unicode subscripts during Tier 2 scan |
 
 ---
 
@@ -22,11 +63,13 @@ Examples: x^2 → $x^2$    深度学习<sub>2</sub> → 深度学习[2]    H₂O
 
 **Current preference**: Convert to plain text, do not preserve any style markers.
 
-**Always apply**: Yes (default, no need to ask each time)
+| Status | Implementation |
+|--------|----------------|
+| ✅ Agent | Agent removes `**bold**`, `*italic*`, `~~strikethrough~~` during Tier 2 |
 
 ---
 
-## Footnote References (Python script batch processing allowed)
+## Footnote References
 
 **Current preference**: Only keep superscript numbers of formulas/symbols in body text (e.g., the `2` in `x²`), do not keep footnote reference markers `[^1]`, etc.
 
@@ -37,21 +80,24 @@ Examples: x^2 → $x^2$    深度学习<sub>2</sub> → 深度学习[2]    H₂O
 **Example**:
 - Original: `the water $^{56}$` → Normalized: `the water [56]`
 
+| Status | Implementation |
+|--------|----------------|
+| ✅ Agent | `[^n]` → `[n]`, `$^{n}$` → `[n]` during Tier 2 |
+
 ---
 
 ## Special Symbols & OCR Artifacts
 
 **Known symbols that need replacement**:
 
-| Original | Replace with | Note |
-|----------|-------------|------|
-| `™` | (delete or replace with plain quote) | OCR artifact |
-| `©` | `©` or `(C)` | Copyright symbol |
-| `®` | `®` or `(R)` | Registered trademark |
-| `­­` | (delete) | Caret/artifact |
-| `…` | `...` | Ellipsis unified to three dots |
-
-**Other OCR artifacts**: Ask user for confirmation when discovered.
+| Original | Replace with | Note | Status |
+|----------|-------------|------|--------|
+| `™` | (delete) | OCR artifact | ✅ Agent |
+| `©` | `(C)` | Copyright symbol | ✅ Agent |
+| `®` | `(R)` | Registered trademark | ✅ Agent |
+| `­­` | (delete) | Caret/artifact | ✅ Agent |
+| `…` | `...` | Ellipsis | ✅ Agent |
+| Other | Ask user | New pattern | ⚠️ Tier 3 |
 
 ---
 
@@ -63,29 +109,19 @@ When two adjacent paragraphs satisfy ALL of the following conditions, automatica
 2. First letter of second paragraph **is lowercase** or **starts with number**
 3. There is **only one** blank line between the two paragraphs
 
-**Example**:
-
-```
-Original:
-it only remains to add to the actual accelerating forces
-
-the new accelerating forces
-
-Normalized:
-it only remains to add to the actual accelerating forces the new accelerating forces
-```
+| Status | Implementation |
+|--------|----------------|
+| ✅ Agent | Agent applies during Tier 2 |
 
 ---
 
-## Attachment Reference Format
+## Attachment / Wiki Link Format
 
-**Current preference**: Keep `![[...]]` syntax as-is.
+**Current preference**: Keep `![[...]]` and `[[...]]` syntax as-is.
 
----
-
-## Wiki Link Format
-
-**Current preference**: Keep `[[...]]` syntax as-is.
+| Status | Implementation |
+|--------|----------------|
+| ✅ Agent | No conversion needed, preserve as-is |
 
 ---
 
@@ -94,42 +130,58 @@ it only remains to add to the actual accelerating forces the new accelerating fo
 All math formulas and pure math symbols must be wrapped with `$...$` or `$$...$$`.
 
 ### Wrapping Rules
-- Inline formula: `$...$`
-- Display formula (blank line above and below): `$$\n...\n$$`
-  - Automated: `scripts/normalize_math.py`'s `split_block_math()` (enabled by default, `--no-split-blocks` disables).
 
-### Standardization Rules
+| Rule | Status | Implementation |
+|------|--------|----------------|
+| Inline formula: `$...$` | ✅ Script | `normalize_math.py` |
+| Display formula: `$$\n...\n$$` | ✅ Script | `normalize_math.py` |
 
-| Original | Standard form |
-|----------|---------------|
-| `sqrt[...]` | `\sqrt[...]` |
-| `·` | `\cdot` |
-| `×` | `\times` |
-| `÷` | `\div` |
-| `≠` | `\neq` |
-| `≤` | `\leq` |
-| `≥` | `\geq` |
-| `α` `β` `γ` | `\alpha` `\beta` `\gamma` |
-| `π` | `\pi` |
-| `∞` | `\infty` |
-| `∂` | `\partial` |
-| `∇` | `\nabla` |
-| `...` / `…` | `\dots` |
-| `\etc` (in math formulas) | `\dots` |
-| `\const` | `\text{const.}` |
-| `\text{c o n s t a n t}` | `\text{constant}` |
+---
+
+### Math Symbol Standardization
+
+**Implemented by `scripts/normalize_math.py`** (✅ = auto via script):
+
+| Original | Standard form | Script | Agent |
+|----------|---------------|:------:|:-----:|
+| `\sqrt[...]` | `\sqrt(...)` | ❌ | ⚠️ |
+| `·` | `\cdot` | ✅ | - |
+| `×` | `\times` | ✅ | - |
+| `÷` | `\div` | ✅ | - |
+| `≠` | `\neq` | ✅ | - |
+| `≤` | `\leq` | ✅ | - |
+| `≥` | `\geq` | ✅ | - |
+| `α` `β` `γ` | `\alpha` `\beta` `\gamma` | ✅ | - |
+| `π` | `\pi` | ✅ | - |
+| `∞` | `\infty` | ✅ | - |
+| `∂` | `\partial` | ✅ | - |
+| `∇` | `\nabla` | ✅ | - |
+| `...` / `…` | `\dots` | ✅ | - |
+| `\etc` (in math) | `\dots` | ❌ | ⚠️ |
+| `\const` | `\text{const.}` | ❌ | ⚠️ |
+| `\text{c o n s t a n t}` | `\text{constant}` | ❌ | ⚠️ |
+
+**Legend**: ✅ = Done | ❌ = Not implemented | ⚠️ = Manual required | - = N/A
+
+---
 
 ### Integral / Summation Symbol S Unification
 
-- In Lagrangian-style text, `S` / `SS` represents total integral (equivalent to `∫`).
-- All occurrences in math context (including bare write, `\mathrm{S}`, `\mathbb{S}`, `\mathbf{S S}`, etc.) unify to:
-  - Single: `\mathbf{S}`
-  - Double: `\mathbf{SS}`
-- Bare `S` / `SS` in body text that immediately follows math expressions (`S(...)`, `S dm`, `SS Π dm`, etc.) should be wrapped as inline formula, with S written as `\mathbf{S}`.
+**In LaGrange-style text, `S` / `SS` represents total integral (equivalent to `∫`).**
 
-### Redundant Spaces Inside Formulas
+| Form | Target | Script | Agent |
+|------|--------|:------:|:-----:|
+| `\mathrm{S}`, `\mathbb{S}`, `\mathbf{S S}` | `\mathbf{S}` | ✅ | - |
+| `\mathrm{SS}`, `\mathbb{SS}`, `\mathbf{S S}` | `\mathbf{SS}` | ✅ | - |
+| Bare `SS` in body text | `\mathbf{SS}` wrapped | ❌ | ⚠️ |
 
-Spaces that are semantically meaningless and visually cluttered in Pandoc/KaTeX should be compressed, for example:
+**Agent task**: When `SS` appears immediately after math expressions in body text (e.g., `SS dm`, `SS Π`), wrap as inline formula with `\mathbf{SS}`.
+
+---
+
+### Intra-formula Space Compression
+
+**Implemented by `scripts/normalize_math.py`**:
 
 | Original | Standard form |
 |----------|---------------|
@@ -138,29 +190,48 @@ Spaces that are semantically meaningless and visually cluttered in Pandoc/KaTeX 
 | `\Omega^ {\prime \prime}` | `\Omega^{\prime\prime}` |
 | `z _ {I}` | `z_{I}` |
 | `\lambda \cdot` | `\lambda\cdot` |
+| `\cmd \cmd` (adjacent) | `\cmd\cmd` |
 
-For batch cases, recommend using `plain-markdown-skill/scripts/normalize_math.py` or one-time regex, no need to ask for each instance.
+| Status |
+|--------|
+| ✅ Script |
+
+---
 
 ### `array` Environment Simplification
 
-Multi-column single-line `\begin{array}{c c c} A, & B, & C \end{array}` → flatten to `A, \quad B, \quad C` (remove `begin/end{array}`, alignment parameters, column separators `&`). Single-column multi-line `{l}` arrays (e.g., multi-line integral derivations) keep as-is.
+**Multi-column single-line arrays → flatten**:
 
-| Original | Standard form |
-|----------|---------------|
-| `\begin{array}{c c c} A, & B, & C \end{array}` | `A, \quad B, \quad C` |
+| Original | Standard form | Script |
+|----------|---------------|:------:|
+| `\begin{array}{c c c} A, & B, & C \end{array}` | `A, \quad B, \quad C` | ✅ |
 
-### Unregistered Non-Pandoc Commands / Unregistered OCR Artifacts
+**Single-column multi-line arrays**: Keep as-is (e.g., multi-line integral derivations).
 
-For cases not listed above, prioritize nearest equivalent replacement automatically per `references/pandoc-latex-support.md`, no need to disturb user each time; only when uncertain (e.g., unidentifiable rare characters) raise as "new pattern" for user confirmation, and invite writing rule back to this file.
+| Status |
+|--------|
+| ✅ Script |
+
+---
+
+### Unregistered Non-Pandoc Commands
+
+**For cases not listed above**: prioritize nearest equivalent replacement per `references/pandoc-latex-support.md`.
+
+| Status | Implementation |
+|--------|----------------|
+| ⚠️ Tier 3 | Ask user for confirmation, then write rule back here |
 
 ---
 
 ## Heading Levels
 
-- Top-level sections (`SECTION`, `Chapter`) use `#`.
-- Secondary blocks (`Subsection`, `Part`) all use `##`, even if original text has `# Subsection III` it should be demoted to `## Subsection III`.
-- Item-level (`Article N`) use `##`.
-- Numbered lists inside items (`1.` / `2.` etc.) keep as list items, do not separately promote to headings; if upstream extraction mistakenly treats list items as `## Article 1` / `## Article 2`, remove the extra heading.
+| Rule | Status | Implementation |
+|------|--------|----------------|
+| `SECTION` / `Chapter` → `#` | ⚠️ Manual | Agent should verify and fix |
+| `Subsection` / `Part` → `##` | ⚠️ Manual | Agent should verify and fix |
+| `Article N` → `##` | ⚠️ Manual | Agent should verify and fix |
+| Numbered lists keep as `- ` | ✅ Agent | - |
 
 ---
 
@@ -170,8 +241,114 @@ For cases not listed above, prioritize nearest equivalent replacement automatica
 - Backup file naming: `*original filename*.bak.orig`
 - Backup files saved in same directory
 
+| Status |
+|--------|
+| ✅ Agent |
+
 ---
 
 ## Other Preferences
 
 (Please supplement according to actual situation)
+
+---
+
+## Formula Variable Wrapping Rules
+
+**数学公式中的变量必须用 `$...$` 包裹**，即使在公式块内部：
+
+| Pattern | Example | Rule |
+|---------|---------|------|
+| 变量名（下划线/大写） | `S_limit`, `S_sorted`, `MSE` | 必须包裹 `$S_{limit}$` |
+| 数组索引 | `S_sorted[0]` | 必须包裹 `$S_{sorted}[0]$` |
+| 列表中的公式 | `S_limit = ...` | 必须包裹 `$...$` |
+| 条件判断 | `n=1`, `n≥4` | 必须包裹 `$n=1$`, `$n\geq 4$` |
+| **下标格式** | `S_limit` | **必须用 `_{...}`，不是 `\_`** |
+
+| Status | Implementation |
+|--------|----------------|
+| ✅ Agent | Tier 2 自动包裹 |
+
+**Examples**:
+
+| Original | ❌ Wrong | ✅ Correct |
+|----------|----------|------------|
+| `S_limit` | `$S\_limit$` | `$S_{limit}$` |
+| `F1` (下标) | `$F\_1$` | `$F_1$` |
+| `S_limit = ...` | `$S\_limit = ...$` | `$S_{limit} = ...$` |
+
+---
+
+## Formula-Chinese Spacing Rules
+
+**公式与中文之间必须有分隔符**，否则 pandoc 会报错。由 `normalize_math.py` 脚本自动处理。
+
+| Pattern | Rule |
+|---------|------|
+| LaTeX 命令后接中文 | 用 `{}` 包裹中文，如 `\cmd中文` → `\cmd{中文}` |
+| 中文后接 LaTeX 命令 | 用 `{}` 包裹中文，如 `中文\cmd` → `{中文}\cmd` |
+
+| Status | Implementation |
+|--------|----------------|
+| ✅ Script | `wrap_chinese_in_math()` in `normalize_math.py` |
+
+**Examples**:
+
+| Original | ✅ Correct |
+|----------|------------|
+| `\times苹果` | `\times{苹果}` |
+| `苹果\times` | `{苹果}\times` |
+| `k_1\times进尺 + k_2\times机械钻速` | `k_1\times{进尺} + k_2\times{机械钻速}` |
+
+---
+
+## Unicode Math Symbols (Additional)
+
+除 `×` 外，以下符号也需要转换：
+
+| Symbol | LaTeX | Status |
+|--------|-------|--------|
+| `×` | `\times` | ✅ Script |
+| `·` | `\cdot` | ✅ Script |
+| `÷` | `\div` | ✅ Script |
+| `≤` | `\leq` | ✅ Script |
+| `≥` | `\geq` | ✅ Script |
+| `≠` | `\neq` | ✅ Script |
+| `≤50` | `\leq50` (无空格) | ✅ Script |
+| `>200` | `\geq200` (无空格) | ✅ Script |
+
+---
+
+## Formula Block Upgrade Rules
+
+**独立一行的公式必须升级为 `$$...$$` 块级格式**：
+
+| Original | Target |
+|----------|--------|
+| 单独一行: `F1 = k1×进尺 + ...` | `$$\nF1 = k1\times进尺 + ...\n$$` |
+| 单独一行: `置信度 = 有效重叠长度 / 总钻井长度` | `$$\n置信度 = 有效重叠长度 / 总钻井长度\n$$` |
+| 单独一行: `进尺命中率 = 单趟进尺 / 总进尺` | `$$\n进尺命中率 = 单趟进尺 / 总进尺\n$$` |
+
+**判断标准**：单独一行且包含 `=` 符号的数学表达式。
+
+| Status | Implementation |
+|--------|----------------|
+| ✅ Agent | Tier 2 自动升级为 `$$...$$` |
+
+---
+
+## Implementation Checklist for New Rules
+
+When adding a new rule, specify:
+
+```markdown
+### New Rule Name
+
+**Original**: `...`
+**Target**: `...`
+**Implementation**: 
+- [ ] Script (`scripts/normalize_math.py`)
+- [ ] Agent (Tier 1/Tier 2)
+- [ ] Manual
+**Priority**: Low / Medium / High
+```

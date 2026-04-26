@@ -278,6 +278,64 @@ def replace_in_math_regions(text: str, fn) -> str:
     return _MATH_REGION.sub(_apply, text)
 
 
+def _is_chinese(char: str) -> bool:
+    """Check if a character is Chinese (CJK Unified Ideographs)."""
+    if not char:
+        return False
+    code = ord(char)
+    # CJK Unified Ideographs: 0x4E00-0x9FFF
+    # CJK Compatibility: 0xF900-0xFAFF
+    # CJK Radicals: 0x2E80-0x2EFF
+    return (0x4E00 <= code <= 0x9FFF or
+            0xF900 <= code <= 0xFAFF or
+            0x2E80 <= code <= 0x2EFF or
+            0x3000 <= code <= 0x303F)  # CJK Symbols
+
+
+def wrap_chinese_in_math(text: str) -> str:
+    """Wrap Chinese characters adjacent to LaTeX commands with {} for pandoc.
+
+    Rules:
+    - LaTeX command followed by Chinese (no space/braces): `\cmd中文` → `\cmd{中文}`
+    - Chinese followed by LaTeX command (no space/braces): `中文\cmd` → `{中文}\cmd`
+
+    Only operates inside math regions ($...$ or $$...$$).
+    """
+    # Chinese character range pattern (matches one or more consecutive CJK chars)
+    # Using explicit Unicode ranges compatible with Python regex
+    _CJK_PATTERN = (
+        r'[\u4e00-\u9fff]'  # CJK Unified Ideographs
+        r'\u9fa5-\u9fff'    # CJK Extension B-I (simplified to range)
+        r'\uf900-\ufaff'    # CJK Compatibility Ideographs
+        r']+'
+    )
+
+    def _process_math(match: "re.Match[str]") -> str:
+        body = match.group(0)
+        is_block = body.startswith("$$")
+        inner = body[2:-2] if is_block else body[1:-1]
+
+        # Pattern 1: LaTeX command followed by Chinese string without separation
+        # e.g., `\times苹果` → `\times{苹果}`
+        inner = re.sub(
+            r'(\\+[a-zA-Z]+)([\u4e00-\u9fff\u9fa5-\u9fff\uf900-\ufaff]+)',
+            lambda m: m.group(1) + "{" + m.group(2) + "}",
+            inner
+        )
+
+        # Pattern 2: Chinese string followed by LaTeX command without separation
+        # e.g., `苹果\times` → `{苹果}\times`
+        inner = re.sub(
+            r'([\u4e00-\u9fff\u9fa5-\u9fff\uf900-\ufaff]+)(\\+[a-zA-Z]+)',
+            lambda m: "{" + m.group(1) + "}" + m.group(2),
+            inner
+        )
+
+        return ("$$" + inner + "$$") if is_block else ("$" + inner + "$")
+
+    return _MATH_REGION.sub(_process_math, text)
+
+
 # Sentence-starter words that typically indicate a new paragraph when they
 # appear at the start of a non-heading, non-blank line (after a period).
 _NEW_PARAGRAPH_STARTERS = frozenset([
@@ -285,6 +343,12 @@ _NEW_PARAGRAPH_STARTERS = frozenset([
     "however", "moreover", "furthermore", "also",
     "but",
 ])
+
+
+def _is_table_row(line: str) -> bool:
+    """Check if a line is a GFM table row (starts or ends with |)."""
+    stripped = line.strip()
+    return stripped.startswith("|") and stripped.endswith("|")
 
 
 def normalize_blank_lines(text: str) -> str:
@@ -297,17 +361,28 @@ def normalize_blank_lines(text: str) -> str:
     - A blank line is always inserted before an ATX heading (lines starting
       with ``#{1,6} ``).
     - Code blocks (fenced with ````` ```` ``` ```` ``` ````) are left untouched.
+    - GFM table rows are protected: consecutive table rows do not get blank
+      lines inserted between them; a blank line is inserted before the first
+      table row (if after prose) and after the last table row (if followed by prose).
     """
     lines = text.splitlines()
     result: list[str] = []
     i = 0
     in_code_block = False
 
+    # Math block state (for $$...$$ display math)
+    in_math_block = False
+
+    # Table block state: track consecutive table rows
+    in_table = False
+
     while i < len(lines):
         line = lines[i]
 
         # Track fenced code block state
         if line.strip().startswith("```"):
+            # Exiting table before entering/exiting code block
+            in_table = False
             result.append(line)
             i += 1
             if not in_code_block or (in_code_block and line.strip() == "```"):
@@ -320,34 +395,32 @@ def normalize_blank_lines(text: str) -> str:
             i += 1
             continue
 
-        # --- Math-block protection ---
-        # Lines inside a $...$ display-math block must not trigger
-        # blank-line insertion between their internal lines.
-        # We detect "inside a math block" by tracking state:
-        # a line that is exactly ``$$`` opens/closes a math block.
-        # While in_math_block, pass all lines through without blank-line logic.
-        # After it closes, we resume normal processing.
-        # (Nested/adjacent math blocks are uncommon enough to ignore.)
-        if not hasattr(normalize_blank_lines, "_math_block_state"):
-            normalize_blank_lines._math_block_state = False  # type: ignore[attr-defined]
-
         stripped = line.strip()
 
         # Detect display-math open/close ($$ on its own line)
         if stripped == "$$":
-            normalize_blank_lines._math_block_state = not normalize_blank_lines._math_block_state  # type: ignore[attr-defined]
+            in_math_block = not in_math_block
             result.append(line)
             i += 1
             continue
 
-        if normalize_blank_lines._math_block_state:  # type: ignore[attr-defined]
+        if in_math_block:
             # Inside math block: pass through, no blank-line processing
             result.append(line)
             i += 1
             continue
 
-        # --- Prose / heading / list processing ---
-        # Rule 1: Collapse 2+ consecutive blank lines to one.
+        # --- Table protection ---
+        is_table_row_line = _is_table_row(line)
+
+        # Track table state for next iteration
+        was_in_table = in_table
+        if is_table_row_line:
+            in_table = True
+        else:
+            in_table = False
+
+        # --- Rule 1: Collapse 2+ consecutive blank lines to one. ---
         if stripped == "":
             # Skip excess blank lines
             while i + 1 < len(lines) and lines[i + 1].strip() == "":
@@ -356,6 +429,7 @@ def normalize_blank_lines(text: str) -> str:
             i += 1
             continue
 
+        # --- Prose / heading / list / table processing ---
         # Detect ATX heading (## Heading)
         is_heading = bool(re.match(r"^#{1,6}\s", line))
 
@@ -363,12 +437,15 @@ def normalize_blank_lines(text: str) -> str:
         is_numbered_item = bool(re.match(r"^\d+\.\s", stripped))
 
         # Determine if this line starts a new paragraph:
-        # headings always start a new paragraph; numbered items do not
-        # (they are sub-structure within a section);
-        # ordinary prose lines start a new paragraph whenever the previous
-        # non-blank line was also ordinary prose (i.e., not a heading).
+        # - Headings always start a new paragraph.
+        # - Table rows do NOT start a new paragraph; they are part of the
+        #   table block, so no blank line should be inserted before them
+        #   if the previous line was also a table row.
+        # - Numbered items do not start a new paragraph (sub-structure).
+        # - Ordinary prose lines start a new paragraph whenever the previous
+        #   non-blank line was also ordinary prose.
         starts_new_para = is_heading
-        if not is_numbered_item and not is_heading and result:
+        if not is_numbered_item and not is_heading and not is_table_row_line and result:
             # Find last non-blank entry
             for prev in reversed(result):
                 if prev == "":
@@ -376,9 +453,14 @@ def normalize_blank_lines(text: str) -> str:
                 starts_new_para = True  # previous line was ordinary prose
                 break
 
-        # Insert a blank line before the line if result doesn't already end
-        # with a blank line.
-        if starts_new_para and result and result[-1] != "":
+        # Special case: entering a table from non-table content
+        # Insert a blank line before the table (if not already present)
+        if is_table_row_line and not was_in_table and result and result[-1] != "":
+            result.append("")
+
+        # Insert a blank line before non-table content that starts a new paragraph
+        # (but NOT when we're continuing a table)
+        if starts_new_para and not is_table_row_line and result and result[-1] != "":
             result.append("")
 
         result.append(line)
@@ -407,6 +489,7 @@ def normalize(
     standalone_inline_to_block: bool = True,
     blank_lines: bool = True,
     simplify_arrays: bool = True,
+    wrap_chinese: bool = True,
 ) -> str:
     """Apply the enabled transforms in a stable order.
 
@@ -429,6 +512,8 @@ def normalize(
         body = promote_standalone_inline(body)
     if split_blocks:
         body = split_block_math(body)
+    if wrap_chinese:
+        body = wrap_chinese_in_math(body)
     if blank_lines:
         body = normalize_blank_lines(body)
     return _join_frontmatter(fm, body)
@@ -461,6 +546,8 @@ def main(argv: list[str] | None = None) -> int:
                         help="skip blank-line normalisation")
     parser.add_argument("--no-simplify-arrays", action="store_true",
                         help="skip array-environment simplification")
+    parser.add_argument("--no-wrap-chinese", action="store_true",
+                        help="skip wrapping Chinese chars adjacent to LaTeX commands")
     parser.add_argument("--terms", type=Path, default=None,
                         help="path to a file of bold terms to strip (one per line)")
     args = parser.parse_args(argv)
@@ -477,6 +564,7 @@ def main(argv: list[str] | None = None) -> int:
         standalone_inline_to_block=not args.no_standalone_inline,
         blank_lines=not args.no_blank_lines,
         simplify_arrays=not args.no_simplify_arrays,
+        wrap_chinese=not args.no_wrap_chinese,
     )
     with open(args.path, "w", encoding="utf-8", newline="\n") as f:
         f.write(result)
