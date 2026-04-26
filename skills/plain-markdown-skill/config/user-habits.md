@@ -261,9 +261,9 @@ All math formulas and pure math symbols must be wrapped with `$...$` or `$$...$$
 |---------|---------|------|
 | 变量名（下划线/大写） | `S_limit`, `S_sorted`, `MSE` | 必须包裹 `$S_{limit}$` |
 | 数组索引 | `S_sorted[0]` | 必须包裹 `$S_{sorted}[0]$` |
-| 列表中的公式 | `S_limit = ...` | 必须包裹 `$...$` |
+| 列表中的公式 | `S_limit = ...` | 必须包裹 `$S_{limit} = \dots$` |
 | 条件判断 | `n=1`, `n≥4` | 必须包裹 `$n=1$`, `$n\geq 4$` |
-| **下标格式** | `S_limit` | **必须用 `_{...}`，不是 `\_`** |
+| **注意下标格式** | `S_limit`, `S\_limit` | **规范是`S_{limit}`，不是 `S\_limit`** |
 
 | Status | Implementation |
 |--------|----------------|
@@ -275,7 +275,6 @@ All math formulas and pure math symbols must be wrapped with `$...$` or `$$...$$
 |----------|----------|------------|
 | `S_limit` | `$S\_limit$` | `$S_{limit}$` |
 | `F1` (下标) | `$F\_1$` | `$F_1$` |
-| `S_limit = ...` | `$S\_limit = ...$` | `$S_{limit} = ...$` |
 
 ---
 
