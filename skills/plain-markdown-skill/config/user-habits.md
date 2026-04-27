@@ -23,9 +23,9 @@
 | **Math** | `\const` → `\text{const.}` | ❌ | - | ⚠️ |
 | **Math** | Bare `SS` → `\mathbf{SS}` (body text) | ❌ | - | ⚠️ |
 | **Math** | Formula-Chinese spacing (`{中文}`) | ✅ | - | - |
-| **Text** | Subscript/superscript conversion | - | ⚠️ | ⚠️ |
-| **Text** | Bold/italic → plain text | - | ✅ | - |
-| **Text** | Footnote `[^n]` → `[n]` | - | ✅ | - |
+| **Text** | Subscript/superscript conversion | ✅ | - | - |
+| **Text** | Bold/italic → plain text | ✅ | - | - |
+| **Text** | Footnote `[^n]` → `[n]` | ✅ | - | - |
 | **Text** | Paragraph merge rules | - | ✅ | - |
 | **Text** | Link whitespace cleanup | - | ✅ | - |
 | **Text** | OCR artifact replacement | - | ✅ | - |
@@ -34,28 +34,53 @@
 | **Delete** | Emoji codes removal | - | ✅ | - |
 | **Delete** | Task list conversion | - | ✅ | - |
 | **Format** | Wiki/attachment links preserved | - | ✅ | - |
-| **Format** | Heading level normalization | - | ⚠️ | ⚠️ |
+| **Format** | Heading level normalization | ✅ | - | - |
+| **Format** | Table conversion (non-GFM → GFM) | - | ✅ | - |
 
 **Legend**: ✅ = Implemented | ⚠️ = Partially/Manual | ❌ = Not implemented | - = Not applicable
 
 **Key**:
-- **Auto (Script)**: `scripts/normalize_math.py` handles automatically
-- **Auto (Agent)**: Agent applies rule during Tier 1/2 processing
+- **Auto (Script)**: `scripts/_process_doc.py` (text/format) or `scripts/normalize_math.py` (math) handles automatically
+- **Auto (Agent)**: Agent applies rule during Tier 1/2 processing (e.g., table conversion, paragraph merging)
 - **Manual**: Must be applied manually or requires special attention
 
 ---
 
 ## Subscript/Superscript Handling
 
-**Current preference**: `[superscript]` / `[subscript]` form, do not use `^` or Unicode superscript characters. Add one space before the brackets.
+**Current preference**: Math variables use `$...$` wrapping with LaTeX `_{sub}` / `^{sup}` syntax. Non-math superscripts (footnote markers) use `[n]` form.
+
+### Pandoc Subscript/Superscript → LaTeX Math (Script: `_process_doc.py`)
+
+Academic documents from DOCX conversion frequently use Pandoc-style `~sub~` / `^sup^` syntax. The script handles **4 distinct pattern variants** — a single regex cannot cover all cases:
+
+| # | Pattern | Example | → Result | Description |
+|---|---------|---------|----------|-------------|
+| 1 | `*VAR~sub~*` | `*C~pm~*` | `$C_{pm}$` | Italic wraps entire subscript expression |
+| 2 | `*VAR*~sub~` | `*T*~max~` | `$T_{\max}$` | Italic only on variable name, separate subscript |
+| 3 | `VAR~sub~` | `G~best~`, `h~f~` | `$G_{best}$`, `$h_{f}$` | Bare subscript (no italic), uppercase or lowercase |
+| 4 | `*VAR*` (standalone) | `*WOB*`, `*RPM*` | `WOB`, `RPM` | Italic-only variable → plain text (or `$WOB$` if in math context) |
+
+**Order matters**: The script processes these in order (1 → 2 → 3) because:
+- Pattern 1 (`*C~pm~*`) would be partially matched by Pattern 2 (`*C*~pm~`), leaving a dangling `*`
+- Pattern 3 (bare subscript) must run last to avoid interfering with patterns 1-2
+
+**Also handled**:
+- Superscript: `*VAR*^sup^` → `$VAR^{sup}$`, `VAR^sup^` → `$VAR^{sup}$`
+- Units: `r·min^-1^` → `$\text{r}\cdot\text{min}^{-1}$`
+- R-squared: `R^2^` → `$R^{2}$`
+
+### Non-math Superscripts
+
+**Current preference**: `[superscript]` / `[subscript]` form for footnote markers.
 
 ```
-Examples: x^2 → $x^2$    深度学习<sub>2</sub> → 深度学习 [2]    H₂O → $H_2 O$    Deep learning$^2$ → Deep learning [2]   Deep learning $_2$ → Deep learning [2]
+Examples: 深度学习<sub>2</sub> → 深度学习 [2]    Deep learning$^2$ → Deep learning [2]   Deep learning $_2$ → Deep learning [2]
 ```
 
 | Status | Implementation |
 |--------|----------------|
-| ⚠️ Manual | Agent must identify patterns like `<sub>`, `^`, Unicode subscripts during Tier 2 scan |
+| ✅ Script | `_process_doc.py` handles Pandoc ~/^ patterns; Agent handles remaining edge cases |
 
 ---
 
@@ -122,6 +147,32 @@ When two adjacent paragraphs satisfy ALL of the following conditions, automatica
 | Status | Implementation |
 |--------|----------------|
 | ✅ Agent | No conversion needed, preserve as-is |
+
+---
+
+## Table Conversion (Non-GFM → GFM)
+
+**Current preference**: All tables must be in GFM pipe-table format (`| col | col |`).
+
+**Status**: **Agent manual only** — not automated in scripts. Reasons:
+- Multi-row headers require semantic merging (e.g., "BP / training / testing / validation" spanning rows)
+- Grid tables (`+---+`) have fragile row/column boundary detection
+- Layout tables containing images should be flattened to `![]()\n(caption)` blocks
+- Regex-based detection produces more false positives than correct conversions
+
+**Agent workflow for tables**:
+1. Identify non-GFM table by scanning for `------` separators, `+---+` borders, or `+=+` markers
+2. Read the table section
+3. Convert with targeted `Edit` calls to GFM format
+4. For layout/image tables: flatten to individual `![]()\n(caption)` blocks
+
+**Conversion examples**:
+
+| Non-GFM | → GFM |
+|---------|-------|
+| Underline-style (`------` separators) | `\| col1 \| col2 \|` with `\|:---\|` alignment |
+| Grid-style (`+---+` borders) | Parse cell contents to GFM rows |
+| Layout tables with `![]()` | Flatten to sequential `![]()\n(caption)` blocks |
 
 ---
 
@@ -351,3 +402,46 @@ When adding a new rule, specify:
 - [ ] Manual
 **Priority**: Low / Medium / High
 ```
+
+---
+
+## Processing Pipeline Notes
+
+> These are operational lessons learned from real document processing. They guide the Agent's behavior but are not conversion rules per se.
+
+### Script Execution Order (CRITICAL)
+
+The `_process_doc.py` script enforces this order internally:
+
+1. **Headings first** → `N. Title` → `# Title` BEFORE `\(n\)` → `n.`
+2. **Pandoc sub/superscript before bold/italic removal** → `*VAR*~sub~` patterns need `*` markers present
+3. **Bold/italic removal after subscript conversion** → once subscripts are wrapped in `$...$`, remove remaining `**`/`*`
+
+**Why**: If `\(n\)` conversion runs first, `\(1\) Constraints...` becomes `1. Constraints...`, which the heading regex would falsely match as a level-1 heading.
+
+### Script Boundary Contract
+
+| Do in `_process_doc.py` | Do NOT do in `_process_doc.py` |
+|---|---|
+| Bold/italic removal | Formula block splitting (`normalize_math.py`'s job) |
+| Heading normalization | Table conversion (Agent manual) |
+| Pandoc ~/^ → LaTeX math | Unicode math → LaTeX (`normalize_math.py`) |
+| Image attribute removal | Formula-Chinese wrapping (`normalize_math.py`) |
+| LaTeX list numbers `\(n\)` → `n.` | Intra-formula space compression (`normalize_math.py`) |
+
+**Why the formula-block rule**: If both scripts split `$$...$$` blocks, each run introduces extra blank lines.
+
+### Pipeline Order (Must Follow)
+
+```
+1. _process_doc.py     → bulk text/format standardization
+2. Agent table fixes   → convert non-GFM tables with targeted Edit calls
+3. normalize_math.py   → final math standardization (ALWAYS LAST)
+```
+
+### Table Conversion Strategy
+
+**Never script, always Agent manual**. Three table types need different handling:
+- **Data tables** (underline `------` or grid `+---+`): Convert to GFM pipe tables row by row
+- **Multi-row-header tables**: Flatten header rows into `| Col1 | Col2 |` then map data
+- **Layout tables** with images: Flatten to sequential `![]()\n(caption)` blocks

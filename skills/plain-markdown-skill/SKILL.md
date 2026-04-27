@@ -18,6 +18,7 @@ Why: User preferences change; keeping rules in one place prevents drift and keep
 
 ## Resource Directory
 
+- `scripts/_process_doc.py` — **Tier 1+2 automation script** for bulk processing of non-math transformations (bold/italic removal, heading normalization, Pandoc subscript/superscript → LaTeX math, image attribute cleanup, etc.). See `## Script Responsibilities` below for what it handles vs. what stays manual.
 - `scripts/normalize_math.py` — **Must be executed every time** math/style standardization script (as workflow step 4), currently 5 transformation groups, each independently toggleable:
   - **Formula block split/upgrade**: Standalone `$...$` on a single line upgrades to `$$\n...\n$$` three-line block format
   - **Intra-formula space compression**: `\mathrm {d}` → `\mathrm{d}`, `z _ {I}` → `z_{I}`, `\cmd \cmd` → `\cmd\cmd`
@@ -40,6 +41,32 @@ Why: User preferences change; keeping rules in one place prevents drift and keep
 - `references/pandoc-latex-support.md` — Pandoc LaTeX compatibility command reference.
 - `references/normalize_lagrange.py` — Reference script for one-time document processing; not for general tool use.
 - `tests/` — pytest regression suite and fixtures for above scripts (`math_section_input.md` / `math_section_expected.md`), run `python -m pytest .claude/skills/plain-markdown-skill/tests -v` before modifying scripts.
+
+---
+
+## Script Responsibilities (Boundary Contract)
+
+To avoid duplicate work and conflicting edits, scripts and Agent have a **strict division of labor**:
+
+| Responsibility | `_process_doc.py` | Agent (Manual) | `normalize_math.py` |
+|:---|---:|:---:|:---:|
+| Bold/italic removal | ✅ | — | — |
+| Heading normalization (`N.` → `#`) | ✅ | — | — |
+| Pandoc sub/superscript → LaTeX math | ✅ | — | — |
+| Image attribute removal `{width=...}` | ✅ | — | — |
+| Escaped char fixes (`\>` → `>`) | ✅ | — | — |
+| LaTeX list numbers `\(n\)` → `n.` | ✅ | — | — |
+| Table conversion (any non-GFM) | ❌ | ✅ | — |
+| Formula block split (`$$...$$`) | ❌ | ❌ | ✅ |
+| Intra-formula space compression | ❌ | ❌ | ✅ |
+| Unicode math → LaTeX | ❌ | ❌ | ✅ |
+| Formula-Chinese wrapping | ❌ | ❌ | ✅ |
+| Integral S unification | ❌ | ❌ | ✅ |
+
+**Key rules:**
+1. `_process_doc.py` MUST NOT do formula block splitting — that's `normalize_math.py`'s job. Doing it in both places causes blank-line artifacts.
+2. Table conversion stays manual (Agent Tier 2) because multi-row headers, grid tables, and layout tables require semantic judgment that regex cannot handle reliably.
+3. The pipeline order is: `_process_doc.py` → Agent table fixes → `normalize_math.py`. This order cannot be changed.
 
 ---
 
@@ -115,6 +142,29 @@ User may provide **file path** or **pasted text**. Always backup first:
 
 Run through Tier 1, Tier 2 in one pass: auto-delete + auto-convert. Collect Tier 3 new pattern list during process.
 
+**Recommended approach**: Use `scripts/_process_doc.py` for bulk Tier 1/2 transformations, then handle tables manually:
+
+```bash
+python scripts/_process_doc.py <file.md>
+```
+
+**CRITICAL — Processing order inside the script:**
+
+The order of operations matters. The script enforces this order:
+1. **Headings first** — convert `N. Title` → `# Title` BEFORE converting `\(n\)` → `n.`. If reversed, `\(1\) Constraints` becomes `1. Constraints` and then gets falsely matched as a level-1 heading.
+2. **Pandoc sub/superscript before bold/italic removal** — `*VAR*~sub~` patterns require the `*` markers to still be present for regex matching.
+3. **Bold/italic removal after subscript conversion** — once subscripts are wrapped in `$...$`, remove remaining `**`/`*` markers.
+
+**Table conversion — Agent manual only:**
+
+Do NOT attempt to automate table conversion in `_process_doc.py`. Reasons:
+- Multi-row headers require semantic merging (e.g., "BP training/testing/validation" rows)
+- Grid tables (`+---+`) have fragile row/column detection
+- Layout tables with images (e.g., side-by-side figure panels) should be flattened to `![]()\n(caption)` blocks
+- Regex-based detection produces more false positives than correct conversions
+
+Instead, the Agent reads each table section and converts with targeted `Edit` calls after the script runs.
+
 ### 3. Report + (If any) Confirm
 
 Give user a concise summary, for example:
@@ -141,13 +191,16 @@ python scripts/normalize_math.py <file path>
 
 This will unify all display formulas to `$$\n...\n$$` three-line block format, and complete batch standardization like intra-formula space compression, integral symbol S unification.
 
-**Key: Regardless of whether normalize_math.py was run before, any new math formulas produced by Tier 2 need it to run again before delivery.** Therefore the correct order is always:
+**Key: `_process_doc.py` must NOT do formula block splitting.** If both scripts split formula blocks, each run introduces extra blank lines around `$$` markers. Formula block splitting is exclusively `normalize_math.py`'s job. See `## Script Responsibilities` for the full boundary contract.
 
-1. Tier 1 → Tier 2 (manual or script conversion)
-2. **normalize_math.py** (final standardization of all outputs from step 1)
-3. Write back
+The correct order is always:
 
-As the skill's final delivery threshold, this step **must execute**, cannot skip.
+1. `_process_doc.py` (Tier 1+2 automation: headings, bold/italic, sub/superscript, lists)
+2. Agent table fixes (manual Tier 2: convert non-GFM tables with targeted `Edit` calls)
+3. **normalize_math.py** (final math standardization of all outputs from steps 1-2)
+4. Write back
+
+As the skill's final delivery threshold, step 3 **must execute** after all other changes, cannot skip.
 
 ### 5. Write Back
 
