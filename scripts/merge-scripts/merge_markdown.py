@@ -83,8 +83,8 @@ def main():
     else:
         output_path = DEFAULT_OUTPUT
 
-    # Find all markdown files in input directory, sorted by name
-    input_files = sorted(input_dir.glob("*.md"))
+    # Find all _plain.md files in input directory, sorted by name
+    input_files = sorted(input_dir.glob("*_plain.md"))
 
     if not input_files:
         print(f"No markdown files found in: {input_dir}")
